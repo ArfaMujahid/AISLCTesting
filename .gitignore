@@ -8,3 +8,10 @@ node_modules/
 dist/
 build/
 coverage/
+
+# AI-DLC working artifacts: the aidlc-workflows methodology generates an
+# aidlc-docs/ tree (requirements, architecture, construction state) at the
+# workspace root during a session. Keep it untracked — it's per-session scratch,
+# and committing it would bloat the repo and confuse later stages about what is
+# authoritative input. (Remove this line if you decide to version those artifacts.)
+aidlc-docs/
