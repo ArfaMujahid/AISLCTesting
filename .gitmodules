@@ -1,0 +1,9 @@
+[submodule "services/user-service"]
+	path = services/user-service
+	url = https://github.com/ArfaMujahid/user-service.git
+[submodule "services/order-service"]
+	path = services/order-service
+	url = https://github.com/ArfaMujahid/order-service.git
+[submodule "services/api-gateway"]
+	path = services/api-gateway
+	url = https://github.com/ArfaMujahid/api-gateway.git
