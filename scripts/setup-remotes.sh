@@ -90,7 +90,7 @@ if [ ! -d .git ]; then
   git config user.name  "$GIT_NAME"
   git config user.email "$GIT_EMAIL"
   git add .
-  git commit -q -m "chore: workspace scaffold (CLAUDE.md, contracts, aidlc-docs)"
+  git commit -q -m "chore: workspace scaffold (CLAUDE.md, contracts)"
 fi
 
 # --- Step 3: create the workspace repo on GitHub (no push yet) ---------------
@@ -112,6 +112,14 @@ for svc in "${SERVICES[@]}"; do
   rmdir "services/$svc" 2>/dev/null || true
   git submodule add "$(repo_url "$svc")" "services/$svc"
 done
+
+# External submodule: upstream AI-DLC workflow rules (not one of our repos — we
+# never push to it, we just pin the version of the methodology we follow).
+if ! { [ -f ".gitmodules" ] && grep -q "aidlc-workflows" .gitmodules; }; then
+  echo "==> Adding external submodule aidlc-workflows -> awslabs/aidlc-workflows"
+  rmdir "aidlc-workflows" 2>/dev/null || true
+  git submodule add https://github.com/awslabs/aidlc-workflows.git aidlc-workflows
+fi
 
 # --- Step 5: commit pointers + push the workspace ----------------------------
 git add .gitmodules services

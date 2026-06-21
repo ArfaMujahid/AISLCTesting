@@ -27,7 +27,7 @@ git submodule update --init --recursive
 | `CLAUDE.md`              | Global AI context + cross-service rules (read this first)     |
 | `.cursor/rules/`         | Same context, for Cursor users                                |
 | `shared-contracts/`      | Source of truth for API specs + event schemas                 |
-| `aidlc-docs/`            | AI-DLC artifacts: requirements, architecture, decisions       |
+| `aidlc-workflows/`       | Submodule → `awslabs/aidlc-workflows` (AI-DLC steering rules)  |
 | `services/`              | Service repos as submodules (user / order / api-gateway)      |
 | `scripts/`               | Bootstrap + maintenance scripts                               |
 

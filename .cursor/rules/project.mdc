@@ -17,7 +17,7 @@ alwaysApply: true
 - This is a PARENT workspace repo. Real service code lives in git submodules under `services/`.
 - Always open the workspace ROOT in Cursor — never a single service folder — so the AI sees every service at once.
 - Never commit service implementation code into this parent repo. It only holds:
-  CLAUDE.md, .cursor/rules/, aidlc-docs/, shared-contracts/, and submodule pointers.
+  CLAUDE.md, .cursor/rules/, shared-contracts/, and submodule pointers (services + aidlc-workflows).
 
 ## Cross-service rules
 - Services talk to each other ONLY over HTTP. Never import another service's source.

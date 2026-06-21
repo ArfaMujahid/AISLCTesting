@@ -64,7 +64,7 @@ and gives the AI the cross-service context it needs.
 workspace/                        ← everyone clones THIS (parent repo)
 ├── CLAUDE.md                     ← global AI context (this file)
 ├── .cursor/rules/project.mdc     ← same context for Cursor
-├── aidlc-docs/                   ← AI-DLC phase artifacts (requirements, architecture, decisions)
+├── aidlc-workflows/              ← git submodule → awslabs/aidlc-workflows (AI-DLC steering rules)
 ├── shared-contracts/             ← source of truth for API contracts and event schemas
 │   ├── api-specs/                ← OpenAPI specs per service
 │   └── events/                   ← async event schemas
@@ -80,7 +80,13 @@ ArfaMujahid/AISLCTesting   ← parent (workspace), has .gitmodules pointing to c
 ArfaMujahid/user-service   ← child, independent repo
 ArfaMujahid/order-service  ← child, independent repo
 ArfaMujahid/api-gateway    ← child, independent repo
+awslabs/aidlc-workflows    ← EXTERNAL submodule (not ours): upstream AI-DLC steering rules
 ```
+
+Note: not every submodule is one of ours. `aidlc-workflows/` points at the
+upstream `awslabs/aidlc-workflows` repo. We pin it at a known commit and only
+move that pointer deliberately — same mechanism as the services, but we never
+push to it; we just track the version of the methodology we're using.
 
 ---
 
@@ -104,8 +110,11 @@ git submodule add git@github.com:ArfaMujahid/user-service.git services/user-serv
 git submodule add git@github.com:ArfaMujahid/order-service.git services/order-service
 git submodule add git@github.com:ArfaMujahid/api-gateway.git services/api-gateway
 
+# External: pull in the upstream AI-DLC workflow rules as a submodule too
+git submodule add https://github.com/awslabs/aidlc-workflows.git aidlc-workflows
+
 git add .
-git commit -m "add service submodules"
+git commit -m "add service + aidlc-workflows submodules"
 git push
 ```
 
@@ -171,7 +180,7 @@ commit hash that doesn't exist yet on the remote. This breaks their clone.
 
 ### Workspace rules
 - Never commit service implementation code to the workspace repo
-- Workspace only holds: CLAUDE.md, .cursor/rules/, aidlc-docs/, shared-contracts/, submodule pointers
+- Workspace only holds: CLAUDE.md, .cursor/rules/, shared-contracts/, and submodule pointers (services + aidlc-workflows)
 - Each service must have its own CLAUDE.md explaining what it does
 - When adding a new service: add the repo, add the submodule, add its spec to shared-contracts, update this file
 
@@ -199,7 +208,7 @@ directory recursively. When you run it from the workspace root, it can read:
 - Every service's code under services/
 - All shared contracts under shared-contracts/
 - This CLAUDE.md for intent and rules
-- aidlc-docs/ for decisions already made
+- aidlc-workflows/ for the AI-DLC methodology and steering rules to follow
 
 This is why opening the workspace root — not individual service folders — matters.
 
@@ -262,6 +271,6 @@ Claude Code should read each service's own CLAUDE.md for service-specific contex
 |------------|--------------------------------------|-------------------------------------------|
 | Claude Code | workspace/CLAUDE.md                  | Reads automatically from working directory|
 | Cursor      | workspace/.cursor/rules/project.mdc  | Reads automatically when folder is opened |
-| AI-DLC      | workspace/aidlc-docs/                | Referenced at start of AI-DLC session     |
+| AI-DLC      | workspace/aidlc-workflows/ (submodule)| Upstream awslabs/aidlc-workflows steering rules, referenced at start of session |
 
 Always open the workspace root folder — not a service subfolder — in your IDE or agent.
