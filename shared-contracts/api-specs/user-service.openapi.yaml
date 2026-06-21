@@ -1,0 +1,82 @@
+# =============================================================================
+# user-service — synchronous HTTP contract (SOURCE OF TRUTH)
+# Owns user data. It is the authority on whether a user exists.
+# order-service depends on GET /users/{id} to validate a user before creating
+# an order, so DO NOT break the shape of the User object without a coordinated
+# change in order-service.
+# =============================================================================
+openapi: 3.0.3
+info:
+  title: user-service
+  version: 1.0.0
+  description: Owns user data; source of truth for user existence.
+servers:
+  - url: http://localhost:8081
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+  /users:
+    get:
+      summary: List all users
+      responses:
+        "200":
+          description: Array of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/User" }
+    post:
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewUser" }
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+  /users/{id}:
+    get:
+      summary: Fetch a single user (used by order-service for validation)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "404":
+          description: No such user
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:    { type: string, example: "u_1" }
+        name:  { type: string, example: "Ada Lovelace" }
+        email: { type: string, example: "ada@example.com" }
+    NewUser:
+      type: object
+      required: [name, email]
+      properties:
+        name:  { type: string }
+        email: { type: string }

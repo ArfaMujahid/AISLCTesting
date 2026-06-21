@@ -1,0 +1,47 @@
+# =============================================================================
+# api-gateway — the platform's single external entry point (SOURCE OF TRUTH)
+# It owns NO data. It only routes inbound requests to the right internal service:
+#   /api/users/*  -> user-service  (:8081)
+#   /api/orders/* -> order-service (:8082)
+# Keep these route prefixes in sync with the gateway implementation.
+# =============================================================================
+openapi: 3.0.3
+info:
+  title: api-gateway
+  version: 1.0.0
+  description: Single entry point; routes external traffic to internal services.
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Gateway liveness probe
+      responses:
+        "200":
+          description: Gateway is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+  /api/users/{proxy+}:
+    get:
+      summary: Proxied to user-service
+      parameters:
+        - name: proxy+
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Response forwarded from user-service }
+  /api/orders/{proxy+}:
+    get:
+      summary: Proxied to order-service
+      parameters:
+        - name: proxy+
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Response forwarded from order-service }

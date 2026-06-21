@@ -1,0 +1,33 @@
+---
+description: Global cross-service context for the Ecommerce Platform workspace. Mirrors CLAUDE.md so Cursor and Claude Code share the same rules.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Ecommerce Platform — Cursor Project Rules
+
+<!--
+  This file is the Cursor equivalent of the workspace-root CLAUDE.md.
+  Keep the two in sync: when you change an inter-service rule in CLAUDE.md,
+  mirror it here so Cursor users get the same guardrails.
+-->
+
+## Workspace model
+- This is a PARENT workspace repo. Real service code lives in git submodules under `services/`.
+- Always open the workspace ROOT in Cursor — never a single service folder — so the AI sees every service at once.
+- Never commit service implementation code into this parent repo. It only holds:
+  CLAUDE.md, .cursor/rules/, aidlc-docs/, shared-contracts/, and submodule pointers.
+
+## Cross-service rules
+- Services talk to each other ONLY over HTTP. Never import another service's source.
+- No database foreign keys across service boundaries.
+- If a dependency service is down, degrade gracefully (timeout + fallback), don't crash.
+
+## Shared-contract rules
+- `shared-contracts/` is the source of truth for every API shape and event schema.
+- Update the spec in `shared-contracts/` BEFORE changing any response field or adding an event.
+
+## Submodule rules
+- Push the service repo first, THEN bump its pointer in the workspace. Never the reverse.
+- After pulling, run `git submodule update --init --recursive` if `services/` looks empty.

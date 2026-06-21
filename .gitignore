@@ -1,0 +1,10 @@
+# The workspace (parent) repo must stay lean — it only tracks context, contracts,
+# and submodule pointers. Anything a service generates should never land here.
+node_modules/
+.env
+.env.*
+*.log
+.DS_Store
+dist/
+build/
+coverage/

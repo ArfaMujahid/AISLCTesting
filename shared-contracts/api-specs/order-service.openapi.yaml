@@ -1,0 +1,71 @@
+# =============================================================================
+# order-service — synchronous HTTP contract (SOURCE OF TRUTH)
+# Owns orders. Before creating an order it calls user-service GET /users/{id}
+# to confirm the user exists (cross-service validation over HTTP — never a DB FK).
+# On success it emits the `order.created` event (see ../events/order-created.event.json).
+# =============================================================================
+openapi: 3.0.3
+info:
+  title: order-service
+  version: 1.0.0
+  description: Owns order data; validates users via user-service.
+servers:
+  - url: http://localhost:8082
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+  /orders:
+    get:
+      summary: List all orders
+      responses:
+        "200":
+          description: Array of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Order" }
+    post:
+      summary: Create an order (validates userId against user-service first)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewOrder" }
+      responses:
+        "201":
+          description: Created order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "400":
+          description: userId did not pass validation against user-service
+        "502":
+          description: user-service was unreachable (dependency failure)
+components:
+  schemas:
+    Order:
+      type: object
+      required: [id, userId, item, quantity]
+      properties:
+        id:       { type: string, example: "o_1" }
+        userId:   { type: string, example: "u_1" }
+        item:     { type: string, example: "Difference Engine" }
+        quantity: { type: integer, example: 1 }
+    NewOrder:
+      type: object
+      required: [userId, item, quantity]
+      properties:
+        userId:   { type: string }
+        item:     { type: string }
+        quantity: { type: integer, minimum: 1 }

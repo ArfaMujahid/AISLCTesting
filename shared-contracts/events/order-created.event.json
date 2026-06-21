@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.ArfaMujahid.dev/events/order.created/v1",
+  "$comment": "SOURCE OF TRUTH for the order.created event. order-service is the only PUBLISHER. Any service may SUBSCRIBE. Never change a field here without bumping the version in $id and coordinating consumers.",
+  "title": "order.created",
+  "description": "Emitted by order-service immediately after an order is successfully persisted (i.e. after the userId passed validation against user-service).",
+  "type": "object",
+  "required": ["eventType", "version", "occurredAt", "data"],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "const": "order.created"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "$comment": "Bump and fork the schema on any breaking change."
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of when the order was created."
+    },
+    "data": {
+      "type": "object",
+      "required": ["orderId", "userId", "item", "quantity"],
+      "properties": {
+        "orderId": { "type": "string", "examples": ["o_1"] },
+        "userId": { "type": "string", "examples": ["u_1"] },
+        "item": { "type": "string", "examples": ["Difference Engine"] },
+        "quantity": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
