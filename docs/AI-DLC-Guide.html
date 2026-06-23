@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-DLC + Multi-Repo Workspace — A Complete Guide</title>
+<style>
+  :root{
+    --ink:#1a1f29; --muted:#5b6472; --line:#d7dce3;
+    --inception:#1565C0; --inception-bg:#E3F0FC;
+    --construction:#2E7D32; --construction-bg:#E6F4E7;
+    --operations:#F57F17; --operations-bg:#FFF7DF;
+    --accent:#5A3FB8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink); line-height:1.62; max-width:920px; margin:0 auto; padding:48px 32px 96px;
+    -webkit-font-smoothing:antialiased; font-size:16px;
+  }
+  h1{font-size:34px; line-height:1.18; margin:0 0 8px; letter-spacing:-0.4px;}
+  h2{font-size:25px; margin:52px 0 14px; padding-bottom:8px; border-bottom:2px solid var(--line); letter-spacing:-0.2px;}
+  h3{font-size:19px; margin:32px 0 10px;}
+  h4{font-size:16px; margin:22px 0 6px; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px;}
+  p{margin:10px 0;}
+  ul,ol{margin:10px 0; padding-left:26px;}
+  li{margin:5px 0;}
+  code{font-family:"SF Mono",SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace; font-size:13.5px;
+    background:#f1f3f7; padding:2px 6px; border-radius:4px; color:#b3306b;}
+  pre{background:#1f2430; color:#e7ebf3; padding:16px 18px; border-radius:8px; overflow:auto; font-size:13px; line-height:1.55;}
+  pre code{background:none; color:inherit; padding:0;}
+  table{border-collapse:collapse; width:100%; margin:16px 0; font-size:14.5px;}
+  th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top;}
+  th{background:#eef1f6; font-weight:700;}
+  a{color:var(--accent); text-decoration:none;}
+  .subtitle{font-size:18px; color:var(--muted); margin:0 0 4px; font-weight:400;}
+  .byline{color:var(--muted); font-size:13.5px; border-bottom:3px solid var(--ink); padding-bottom:24px; margin-bottom:8px;}
+  .tag{display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.5px; padding:2px 9px; border-radius:20px; color:#fff; vertical-align:middle;}
+  .screenshot{width:100%; border:1px solid var(--line); border-radius:8px; margin:8px 0 4px; display:block;}
+  .caption{font-size:13px; color:var(--muted); font-style:italic; margin:0 0 18px;}
+  .toc{background:#f6f8fb; border:1px solid var(--line); border-radius:10px; padding:18px 26px;}
+  .toc ol{margin:6px 0;}
+</style>
+</head>
+<body>
+
+<h1>AI-DLC &amp; the Multi-Repo Workspace</h1>
+<p class="subtitle">A complete guide: the problem, the architecture, the methodology, and the day-to-day workflow.</p>
+<p class="byline">Ecommerce Platform Workspace &nbsp;·&nbsp; AI-DLC = <strong>AI-Driven Development Life Cycle</strong> &nbsp;·&nbsp; Based on <code>awslabs/aidlc-workflows</code></p>
+
+<!-- ============ HOW TO USE ============ -->
+<table role="presentation" style="border:none; margin:22px 0;">
+<tr><td style="border:none; border-left:5px solid #5A3FB8; background:#f3f0fb; padding:14px 20px; border-radius:0 8px 8px 0;">
+<strong>📋 How to put this into Google Docs (keep the formatting)</strong><br>
+1. Open this <code>.html</code> file in Chrome (double-click it).<br>
+2. Select everything: <strong>Cmd/Ctrl + A</strong>, then copy: <strong>Cmd/Ctrl + C</strong>.<br>
+3. In your Google Doc, paste: <strong>Cmd/Ctrl + V</strong>. Headings, tables, colours, and diagrams carry through.<br>
+<span style="color:#5b6472; font-size:13.5px;">Note: pasted images can occasionally need a manual re-drag in Google Docs. The diagrams are built as tables, so they always survive the paste.</span>
+</td></tr>
+</table>
+
+<!-- ============ TOC ============ -->
+<div class="toc">
+<strong>Contents</strong>
+<ol>
+<li>The problem we are solving</li>
+<li>Solution, part 1 — the workspace + git submodules</li>
+<li>Working with submodules (the how-to)</li>
+<li>Solution, part 2 — what AI-DLC is and why</li>
+<li>The complete AI-DLC flow (the three phases)</li>
+<li>How you interact with it — the gate model</li>
+<li>The core discipline — never vibe code</li>
+<li>How AI-DLC is wired into this repo</li>
+<li>AI-DLC in your IDE (screenshots)</li>
+<li>Glossary &amp; quick reference</li>
+</ol>
+</div>
+
+<!-- ==================================================================== -->
+<h2>1. The Problem We Are Solving</h2>
+<p>There are actually <strong>two</strong> distinct problems, and this workspace solves both. It helps to keep them separate in your head.</p>
+
+<h3>Problem A — AI loses context across repositories</h3>
+<p>When a system is split across many repos, AI coding tools lose the big picture. By default, if you open a single service repo, the AI only knows about <em>that</em> service. It doesn't know what other services exist, how they talk to each other, what contracts they share, or what decisions have already been made. The results:</p>
+<ul>
+<li>The AI suggests changes that quietly <strong>break other services</strong>.</li>
+<li>Logic gets <strong>duplicated</strong> because the AI doesn't know it already exists elsewhere.</li>
+<li>API shapes drift <strong>inconsistent</strong> because the AI can't see the shared contracts.</li>
+<li>Refactors miss <strong>inter-service dependencies</strong> entirely.</li>
+</ul>
+<p>The naive fix — keeping a separate "context repo" next to the service repos — doesn't work. You can't guarantee everyone cloned it, put it at the right path, or kept it in sync. The AI still won't automatically pick it up when you open a service folder.</p>
+
+<h3>Problem B — AI development without discipline ("vibe coding")</h3>
+<p>Even with full context, letting an AI generate code from a one-line prompt produces work with <strong>no plan, no record of decisions, and no checkpoints</strong>. Requirements are assumed rather than confirmed, design choices are invisible, and nobody can later answer "why was it built this way?" This is fast on day one and expensive every day after.</p>
+
+<table role="presentation" style="border:none;">
+<tr><td style="border:none; border-left:5px solid #2E7D32; background:#E6F4E7; padding:14px 20px; border-radius:0 8px 8px 0;">
+<strong>The two-part answer.</strong> A <strong>workspace repo with git submodules</strong> solves Problem A (context). The <strong>AI-DLC methodology</strong> solves Problem B (discipline). The rest of this document explains each, and how they fit together in this repo.
+</td></tr>
+</table>
+
+<!-- ==================================================================== -->
+<h2>2. Solution, Part 1 — The Workspace + Git Submodules</h2>
+<p>We use a single <strong>workspace repo</strong> that everyone clones. It does not contain service code directly — it stitches the independent service repos together as <strong>git submodules</strong>. Open the workspace root in your IDE (or run Claude Code from it) and the AI can see every service at once. <strong>One clone, full context.</strong></p>
+<p>Each service repo stays independent — its own git history, its own CI/CD, its own deployments. The workspace just records a <em>pointer</em> (a commit hash) to a known-good version of each service.</p>
+
+<h3>The repo structure</h3>
+<pre><code>workspace/  (everyone clones THIS — the parent repo)
+├── CLAUDE.md                 ← global AI context + cross-service rules
+├── .cursor/rules/            ← same context, for Cursor
+├── aidlc-workflows/          ← submodule → awslabs/aidlc-workflows (EXTERNAL, not ours)
+├── aidlc-docs/               ← AI-DLC working artifacts (tracked in git)
+├── shared-contracts/         ← source of truth for API specs + event schemas
+│   ├── api-specs/
+│   └── events/
+└── services/                 ← service repos as submodules
+    ├── user-service/         ← submodule → ArfaMujahid/user-service
+    ├── order-service/        ← submodule → ArfaMujahid/order-service
+    └── api-gateway/          ← submodule → ArfaMujahid/api-gateway</code></pre>
+
+<h3>How the pointer model works (the key idea)</h3>
+<p>The workspace doesn't store the service code. Each submodule entry is just a <strong>commit hash</strong> pointing at a specific state of the child repo. That gives you:</p>
+<ul>
+<li>Services that are independently deployable and versionable.</li>
+<li>Different teams owning different repos.</li>
+<li>A workspace that always reflects a <strong>known-good combination</strong> of service versions.</li>
+</ul>
+<p>Updating a service is therefore two moves: <em>push the service repo</em>, then <em>bump the pointer in the workspace</em>. (Section 3 covers this in detail — it's the part people get wrong.)</p>
+
+<h3>One submodule is not ours</h3>
+<p><code>aidlc-workflows/</code> points at the upstream <strong>awslabs/aidlc-workflows</strong> repo, not one of our repos. We pin it at a known commit and only move that pointer deliberately. We never push to it — we just track the version of the methodology we're using.</p>
+
+<h3>Cloning the right way</h3>
+<pre><code># --recurse-submodules pulls the service repos too
+git clone --recurse-submodules git@github.com:ArfaMujahid/AISLCTesting.git
+
+# Forgot the flag and services/ came up empty? Fix it with:
+git submodule update --init --recursive</code></pre>
+
+<!-- ==================================================================== -->
+<h2>3. Working With Submodules (the how-to)</h2>
+<p>Every submodule change touches <strong>two repos</strong>: the <em>service repo</em> (where the code lives) and the <em>workspace repo</em> (which stores the pointer). Nothing automatically links them — you make two deliberate commits, and <strong>order matters</strong>.</p>
+
+<h3>The two-repo mental model</h3>
+<table>
+<tr><th>Where you commit</th><th>What you're committing</th><th>Where it goes</th></tr>
+<tr><td><code>services/user-service</code></td><td>actual code changes</td><td><code>ArfaMujahid/user-service</code></td></tr>
+<tr><td><code>AISLCTesting</code> (workspace root)</td><td>the updated submodule pointer (a commit hash)</td><td><code>ArfaMujahid/AISLCTesting</code></td></tr>
+</table>
+
+<h3>The golden rule</h3>
+<table role="presentation" style="border:none;">
+<tr><td style="border:none; border-left:5px solid #C62828; background:#FDECEC; padding:14px 20px; border-radius:0 8px 8px 0;">
+<strong>Always push the service repo first, then bump the workspace pointer.</strong> If you reverse it, other developers pull a commit hash that doesn't exist on the remote yet — and their clone breaks.
+</td></tr>
+</table>
+
+<h4>Step 1 — commit &amp; push inside the submodule</h4>
+<pre><code>cd services/user-service
+git checkout main          # avoid detached HEAD — see the footgun below
+# ... make your edits ...
+git add .
+git commit -m "your change"
+git push origin main       # → pushes to ArfaMujahid/user-service</code></pre>
+<p>At this point your code is safe on the service remote, but the workspace still points at the <em>old</em> commit — it has no idea anything changed.</p>
+
+<h4>Step 2 — bump the pointer in the workspace</h4>
+<pre><code>cd ../..                   # back to the workspace root
+git add services/user-service   # stages the NEW commit hash, not the code
+git commit -m "bump user-service to &lt;short-hash&gt;"
+git push                   # → pushes to ArfaMujahid/AISLCTesting</code></pre>
+<p>That second commit contains no service code — just the moved pointer. Confirm with <code>git diff --cached</code> and you'll see <code>-Subproject commit abc123…</code> / <code>+Subproject commit def456…</code>.</p>
+
+<h3>The detached-HEAD footgun</h3>
+<p>Submodules check out a specific <em>commit</em>, not a branch, so by default you're on a "detached HEAD." If you commit there without first running <code>git checkout main</code>, your commit isn't on any branch and <code>git push</code> won't know where to send it — the work appears to vanish. <strong>Always <code>git checkout main</code> inside the submodule before editing.</strong></p>
+
+<h3>Common submodule footguns</h3>
+<table>
+<tr><th>Problem</th><th>What happens</th><th>Fix</th></tr>
+<tr><td>Cloned without <code>--recurse-submodules</code></td><td><code>services/</code> folders are empty</td><td><code>git submodule update --init --recursive</code></td></tr>
+<tr><td>Submodule on detached HEAD</td><td>commits seem to disappear</td><td><code>cd services/x &amp;&amp; git checkout main</code></td></tr>
+<tr><td>Bumped pointer before pushing service</td><td>others get a missing commit hash</td><td>always push the service repo first</td></tr>
+<tr><td>Forgot to bump after pushing service</td><td>others stay on the old version</td><td><code>git add services/x &amp;&amp; git commit &amp;&amp; git push</code></td></tr>
+<tr><td>Merge conflict on the pointer</td><td>confusing diff of two hashes</td><td>pick the newer hash, commit</td></tr>
+<tr><td>Pull latest of every service at once</td><td>—</td><td><code>git submodule update --remote</code></td></tr>
+</table>
+
+<!-- ==================================================================== -->
+<h2>4. Solution, Part 2 — What AI-DLC Is and Why</h2>
+<p><strong>AI-DLC (AI-Driven Development Life Cycle)</strong> is an intelligent, adaptive software-development workflow from AWS Labs. It turns "ask the AI to build something" into a structured lifecycle that <strong>maintains quality standards and keeps humans in control at every step</strong>.</p>
+<p>The central bargain:</p>
+<table role="presentation" style="border:none;">
+<tr><td style="border:none; border-left:5px solid #1565C0; background:#E3F0FC; padding:14px 20px; border-radius:0 8px 8px 0;">
+<strong>The AI does the work. Humans hold the gates.</strong> The AI analyses, plans, designs, and generates code — but it <em>stops at every stage boundary</em> and waits for explicit human approval before moving on. Every decision and every prompt is recorded.
+</td></tr>
+</table>
+
+<h3>What it gives you that raw prompting doesn't</h3>
+<ul>
+<li><strong>Adaptive depth</strong> — a one-line fix gets a light touch; a production service gets full requirements, design, and NFR treatment. The workflow adapts to the work, not the other way around.</li>
+<li><strong>Durable artifacts</strong> — requirements, user stories, designs, and plans are written to files (<code>aidlc-docs/</code>), so decisions survive context resets and team handoffs.</li>
+<li><strong>Approval gates</strong> — the AI never silently barrels ahead; you review and approve each stage.</li>
+<li><strong>A complete audit trail</strong> — every prompt and response is logged with timestamps in <code>audit.md</code>.</li>
+<li><strong>A single source of truth</strong> — design documents drive code generation, so the docs and the code stay in sync.</li>
+</ul>
+
+<!-- ==================================================================== -->
+<h2>5. The Complete AI-DLC Flow</h2>
+<p>AI-DLC has a <strong>three-phase lifecycle</strong>. Each phase answers a different question.</p>
+
+<!-- Phase overview diagram (table-based so it survives paste) -->
+<table style="margin-top:18px;">
+<tr>
+  <td style="background:#E3F0FC; border:2px solid #1565C0; width:33%; text-align:center; vertical-align:top;">
+    <span class="tag" style="background:#1565C0;">🔵 INCEPTION</span><br>
+    <strong style="font-size:15px;">WHAT &amp; WHY</strong><br>
+    <span style="font-size:13.5px; color:#5b6472;">Planning, requirements,<br>architecture decisions</span>
+  </td>
+  <td style="background:#E6F4E7; border:2px solid #2E7D32; width:34%; text-align:center; vertical-align:top;">
+    <span class="tag" style="background:#2E7D32;">🟢 CONSTRUCTION</span><br>
+    <strong style="font-size:15px;">HOW</strong><br>
+    <span style="font-size:13.5px; color:#5b6472;">Detailed design, NFRs,<br>code generation, build &amp; test</span>
+  </td>
+  <td style="background:#FFF7DF; border:2px solid #F57F17; width:33%; text-align:center; vertical-align:top;">
+    <span class="tag" style="background:#F57F17;">🟡 OPERATIONS</span><br>
+    <strong style="font-size:15px;">DEPLOY &amp; RUN</strong><br>
+    <span style="font-size:13.5px; color:#5b6472;">Placeholder for future<br>deploy &amp; monitoring</span>
+  </td>
+</tr>
+</table>
+
+<h3>The adaptive principle</h3>
+<p>Not every stage runs every time. Some stages are <strong>ALWAYS</strong> executed; the rest are <strong>CONDITIONAL</strong> — the AI decides whether they add value based on your intent, the existing codebase, and the complexity and risk of the change. There are <em>no fixed sequences</em>; stages run in the order that makes sense for the task.</p>
+
+<h3>The full flow, stage by stage</h3>
+<p>The diagram below shows the complete path. Green rows are always executed; amber rows run only when they add value. <code>→</code> is "next"; the Construction design stages form a <strong>per-unit loop</strong> that repeats for each unit of work before code generation.</p>
+
+<table>
+<tr><th style="width:18%;">Phase</th><th style="width:26%;">Stage</th><th style="width:14%;">Runs?</th><th>Purpose</th></tr>
+
+<tr><td rowspan="7" style="background:#E3F0FC; font-weight:700; color:#1565C0;">🔵 INCEPTION<br><span style="font-weight:400; color:#5b6472; font-size:13px;">what &amp; why</span></td>
+    <td>Workspace Detection</td><td style="background:#E6F4E7;"><strong>Always</strong></td><td>Scan the workspace; greenfield vs brownfield; resume if a prior session exists.</td></tr>
+<tr><td>Reverse Engineering</td><td style="background:#FFF7DF;">Conditional<br><span style="font-size:12px;">brownfield only</span></td><td>Analyse an existing codebase — architecture, components, APIs, dependencies.</td></tr>
+<tr><td>Requirements Analysis</td><td style="background:#E6F4E7;"><strong>Always</strong><br><span style="font-size:12px;">adaptive depth</span></td><td>Capture intent; gather functional &amp; non-functional requirements; ask clarifying questions.</td></tr>
+<tr><td>User Stories</td><td style="background:#FFF7DF;">Conditional</td><td>Create stories &amp; personas when there's real user-facing impact.</td></tr>
+<tr><td>Workflow Planning</td><td style="background:#E6F4E7;"><strong>Always</strong></td><td>Decide which stages to run and at what depth; visualise the plan.</td></tr>
+<tr><td>Application Design</td><td style="background:#FFF7DF;">Conditional</td><td>Identify components, methods, business rules, and service layers.</td></tr>
+<tr><td>Units Generation</td><td style="background:#FFF7DF;">Conditional</td><td>Decompose the system into independent <strong>units of work</strong>.</td></tr>
+
+<tr><td rowspan="6" style="background:#E6F4E7; font-weight:700; color:#2E7D32;">🟢 CONSTRUCTION<br><span style="font-weight:400; color:#5b6472; font-size:13px;">how — per-unit loop</span></td>
+    <td>Functional Design</td><td style="background:#FFF7DF;">Conditional<br><span style="font-size:12px;">per-unit</span></td><td>Business logic, domain models, data schemas — technology-agnostic.</td></tr>
+<tr><td>NFR Requirements</td><td style="background:#FFF7DF;">Conditional<br><span style="font-size:12px;">per-unit</span></td><td>Performance, security, scalability; select the tech stack.</td></tr>
+<tr><td>NFR Design</td><td style="background:#FFF7DF;">Conditional<br><span style="font-size:12px;">per-unit</span></td><td>Apply NFR patterns and logical components to the design.</td></tr>
+<tr><td>Infrastructure Design</td><td style="background:#FFF7DF;">Conditional<br><span style="font-size:12px;">per-unit</span></td><td>Map the design to actual cloud / infrastructure services.</td></tr>
+<tr><td>Code Generation</td><td style="background:#E6F4E7;"><strong>Always</strong><br><span style="font-size:12px;">per-unit</span></td><td><strong>Part 1: Plan</strong> (checkbox file list) → <strong>Part 2: Generate</strong> code &amp; tests.</td></tr>
+<tr><td>Build &amp; Test</td><td style="background:#E6F4E7;"><strong>Always</strong><br><span style="font-size:12px;">after all units</span></td><td>Build instructions, unit / integration / performance test instructions.</td></tr>
+
+<tr><td style="background:#FFF7DF; font-weight:700; color:#F57F17;">🟡 OPERATIONS</td>
+    <td>Operations</td><td style="background:#eee;">Placeholder</td><td>Reserved for future deploy, monitoring, and incident workflows.</td></tr>
+</table>
+
+<table role="presentation" style="border:none;">
+<tr><td style="border:none; border-left:5px solid #2E7D32; background:#E6F4E7; padding:12px 18px; border-radius:0 8px 8px 0; font-size:14.5px;">
+<strong>The per-unit loop.</strong> In Construction, each unit of work is taken all the way through its design stages and Code Generation <em>before</em> the next unit starts. Once every unit is done, a single Build &amp; Test stage closes out the whole effort.
+</td></tr>
+</table>
+
+<h3>Depth levels</h3>
+<table>
+<tr><th>Level</th><th>When</th><th>What you get</th></tr>
+<tr><td><strong>Minimal</strong></td><td>simple, clear request</td><td>Just enough — document the intent and move.</td></tr>
+<tr><td><strong>Standard</strong></td><td>normal complexity</td><td>Functional + non-functional requirements, standard artifacts.</td></tr>
+<tr><td><strong>Comprehensive</strong></td><td>complex / high-risk / production-critical</td><td>Full depth, full traceability, all artifacts.</td></tr>
+</table>
+<p>You can influence it directly: <em>"Keep this at minimal depth"</em> or <em>"This is production-critical — run at comprehensive depth."</em></p>
+
+<!-- ==================================================================== -->
+<h2>6. How You Interact With It — the Gate Model</h2>
+<p>This is the part that feels different from normal AI chat. AI-DLC does not ask clarifying questions inline and then guess. It writes questions to a file, waits, and stops at every stage boundary.</p>
+
+<h3>The Question → Doc → Approval flow</h3>
+<table style="margin-top:8px;">
+<tr>
+<td style="text-align:center; background:#f6f8fb;"><strong>1. AI writes a question file</strong><br><span style="font-size:13px; color:#5b6472;">and stops</span></td>
+<td style="text-align:center; width:36px; border:none; font-size:20px;">→</td>
+<td style="text-align:center; background:#f6f8fb;"><strong>2. You fill in <code>[Answer]:</code> tags</strong><br><span style="font-size:13px; color:#5b6472;">a durable, reviewable record</span></td>
+<td style="text-align:center; width:36px; border:none; font-size:20px;">→</td>
+<td style="text-align:center; background:#f6f8fb;"><strong>3. You say "answers ready, re-read &amp; proceed"</strong></td>
+<td style="text-align:center; width:36px; border:none; font-size:20px;">→</td>
+<td style="text-align:center; background:#E6F4E7;"><strong>4. AI validates &amp; generates the next artifact</strong></td>
+</tr>
+</table>
+
+<p>Questions are multiple-choice. You answer in the file itself:</p>
+<pre><code>## Question: Deployment model
+Where will this service be deployed?
+
+A) AWS Lambda (serverless)
+B) AWS ECS Fargate (containerized)
+C) Existing on-premises infrastructure
+X) Other (describe after the [Answer]: tag)
+
+[Answer]: B — containerized; we already run ECS in this account</code></pre>
+<p>Tips that work well: add a label next to the letter, include a one-line justification, combine options when you mean both (<code>B and C</code>), and use <code>X</code> freely when nothing fits rather than forcing a wrong answer.</p>
+
+<h3>Approval gates</h3>
+<p>At the end of each stage, AI-DLC presents a standardized <strong>two-option</strong> completion message:</p>
+<table>
+<tr><th style="width:50%;">Request Changes</th><th>Approve &amp; Continue</th></tr>
+<tr><td>Ask for modifications before moving on. The AI revises and re-presents.</td><td>Accept the output and advance to the next stage.</td></tr>
+</table>
+<p><strong>Read the generated artifact before you approve.</strong> Design documents are the source of truth for code generation — mistakes that slip through a gate are much harder to fix later.</p>
+
+<h3>Context management — clear at the gates</h3>
+<p>Each gate is a natural place to <strong>start a fresh context</strong>. The AI's work is already saved to files, so a clean reset is low-risk: the next context loads the relevant artifacts from disk and continues without dragging along accumulated noise. If your tool offers a "compact context" prompt mid-workflow, decline it — compaction loses more than a clean reset. To resume:</p>
+<pre><code>Go to aidlc-docs/aidlc-state.md, find the first unchecked item,
+then go to the corresponding plan file and resume from that point.</code></pre>
+
+<h3>The two files that track everything</h3>
+<table>
+<tr><th style="width:30%;">File</th><th>Role</th></tr>
+<tr><td><code>aidlc-docs/aidlc-state.md</code></td><td>Progress &amp; gate checklist — which stages ran, which were skipped, what's next.</td></tr>
+<tr><td><code>aidlc-docs/audit.md</code></td><td>Complete audit trail — every prompt and response, raw and timestamped (ISO 8601). Always appended, never overwritten.</td></tr>
+</table>
+
+<!-- ==================================================================== -->
+<h2>7. The Core Discipline — Never Vibe Code</h2>
+<p>"Vibe coding" means directly editing generated code to make a quick fix — bypassing the design documents. It feels fast and creates drift: the design docs (the source of truth AI-DLC reads for every subsequent operation) no longer match what the code actually does. The next code-generation run, session resume, or teammate handoff then hits confusion and rework.</p>
+<table role="presentation" style="border:none;">
+<tr><td style="border:none; border-left:5px solid #C62828; background:#FDECEC; padding:14px 20px; border-radius:0 8px 8px 0;">
+<strong>The rule: update the design first, then regenerate the code.</strong> Never fix the code directly.
+</td></tr>
+</table>
+
+<h3>The right way to make any change</h3>
+<table>
+<tr><th style="width:8%;">Step</th><th>What you do</th></tr>
+<tr><td><strong>1</strong></td><td><strong>Describe the issue, touch nothing.</strong> <em>"Do not update any documents yet. I've found issue X. Help me understand where it needs to be addressed."</em></td></tr>
+<tr><td><strong>2</strong></td><td><strong>Fix the design document.</strong> <em>"Update [design doc] to reflect the fix, then check whether requirements or user stories also need updating."</em></td></tr>
+<tr><td><strong>3</strong></td><td><strong>Regenerate the affected code.</strong> <em>"The design for [unit] changed — re-run code generation for the affected files only."</em></td></tr>
+</table>
+
+<h3>Two standing rules that prevent drift</h3>
+<p>Set these once at the start of Construction and they apply for the whole phase:</p>
+<ul>
+<li><strong>Back-propagation:</strong> "Every time you update a document, check whether the change impacts the requirements document and user stories, and prompt me if it does."</li>
+<li><strong>Design-first:</strong> "When you make a design decision during code generation, always make sure the documentation reflects it before proceeding."</li>
+</ul>
+<p>One more practical note: ask exploratory questions safely by prefixing them with <em>"Do not update any documents."</em> — otherwise the AI may interpret a question as a change request and start editing.</p>
+
+<!-- ==================================================================== -->
+<h2>8. How AI-DLC Is Wired Into This Repo</h2>
+<p>AI-DLC isn't copied into the workspace — it's pulled in as a submodule, the same mechanism as the services, so we track an exact version of the methodology.</p>
+<table>
+<tr><th style="width:32%;">Piece</th><th>What it is</th></tr>
+<tr><td><code>aidlc-workflows/</code></td><td>Submodule → <code>awslabs/aidlc-workflows</code>. The steering rules the AI follows. <strong>External and pinned</strong> — we never push to it; we only move the pointer deliberately to adopt a new version.</td></tr>
+<tr><td><code>aidlc-docs/</code></td><td>The working artifacts AI-DLC produces (requirements, designs, state, audit). <strong>Tracked in git</strong>, so the decisions are versioned alongside the workspace.</td></tr>
+<tr><td><code>CLAUDE.md</code></td><td>Global context the AI reads first — including the rule to follow AI-DLC and the cross-service rules.</td></tr>
+</table>
+
+<h3>Where code goes vs where docs go</h3>
+<table role="presentation" style="border:none;">
+<tr><td style="border:none; border-left:5px solid #F57F17; background:#FFF7DF; padding:14px 20px; border-radius:0 8px 8px 0;">
+<strong>Application code → the workspace root (inside the relevant service). Documentation → <code>aidlc-docs/</code> only.</strong> Never put code in <code>aidlc-docs/</code>, and keep human-facing reports out of it too — files there are reloaded as design input on later stages and would inflate context.
+</td></tr>
+</table>
+
+<h3>The artifacts AI-DLC writes</h3>
+<pre><code>aidlc-docs/
+├── aidlc-state.md            # progress / gate checklist
+├── audit.md                  # full, timestamped audit trail
+├── inception/
+│   ├── requirements/         # requirement docs + verification questions
+│   ├── user-stories/
+│   └── application-design/
+├── construction/
+│   ├── {unit-name}/
+│   │   ├── functional-design/
+│   │   ├── nfr-requirements/
+│   │   ├── nfr-design/
+│   │   └── code/             # markdown summaries (code itself lives at root)
+│   └── build-and-test/
+└── operations/               # placeholder</code></pre>
+
+<h3>Kicking off a session</h3>
+<p>Prepare two short inputs first — they dramatically cut the number of clarifying questions:</p>
+<ul>
+<li><strong>Vision Document</strong> — what you're building and why; MVP features in scope; what's explicitly out of scope; known open questions.</li>
+<li><strong>Technical Environment Document</strong> — language/version, framework, cloud + deploy model, test framework, a <em>prohibited-libraries</em> table (with reason + alternative), and example code patterns for a typical endpoint, function, and test.</li>
+</ul>
+<pre><code>I want to start a new project. Please read [vision document] and
+[technical environment document], then begin the AI-DLC workflow.</code></pre>
+
+<!-- ==================================================================== -->
+<h2>9. AI-DLC in Your IDE</h2>
+<p>AI-DLC is tool-agnostic — the same rules load across coding assistants. Once the rules are in place, the assistant greets you with the AI-DLC workflow and starts gating its work. Below: the rules loaded in several environments.</p>
+
+<img class="screenshot" src="../aidlc-workflows/assets/images/cursor-ide-aidlc-rules-loaded.png" alt="AI-DLC rules loaded in Cursor IDE">
+<p class="caption">Cursor IDE — AI-DLC rules loaded as project rules.</p>
+
+<img class="screenshot" src="../aidlc-workflows/assets/images/cline-ide-aidlc-rules-loaded.png" alt="AI-DLC rules loaded in Cline">
+<p class="caption">Cline — AI-DLC rules recognised and active.</p>
+
+<img class="screenshot" src="../aidlc-workflows/assets/images/q-ide-aidlc-rules-loaded.png" alt="AI-DLC rules loaded in Amazon Q Developer">
+<p class="caption">Amazon Q Developer — AI-DLC steering rules loaded.</p>
+
+<img class="screenshot" src="../aidlc-workflows/assets/images/kiro-ide-aidlc-rules-loaded.png" alt="AI-DLC rules loaded in Kiro IDE">
+<p class="caption">Kiro IDE — AI-DLC rules loaded as Kiro steering files.</p>
+
+<!-- ==================================================================== -->
+<h2>10. Glossary &amp; Quick Reference</h2>
+
+<h4>Terminology</h4>
+<table>
+<tr><th style="width:24%;">Term</th><th>Meaning</th></tr>
+<tr><td><strong>Phase</strong></td><td>One of the three lifecycle phases: Inception, Construction, Operations.</td></tr>
+<tr><td><strong>Stage</strong></td><td>An individual activity within a phase (e.g. Requirements Analysis). Either ALWAYS or CONDITIONAL.</td></tr>
+<tr><td><strong>Greenfield / Brownfield</strong></td><td>A brand-new project vs. work added to an existing codebase (which triggers Reverse Engineering).</td></tr>
+<tr><td><strong>Unit of Work (UOW)</strong></td><td>A logical grouping of stories taken through design + code as one chunk; often becomes a service.</td></tr>
+<tr><td><strong>NFR</strong></td><td>Non-Functional Requirement — performance, security, scalability, etc.</td></tr>
+<tr><td><strong>Component / Module / Service</strong></td><td>Reusable building block / logical grouping within a service / independently deployable unit.</td></tr>
+<tr><td><strong>Plan vs Artifact</strong></td><td>A plan is a checkbox/question file that guides execution; an artifact is the generated output.</td></tr>
+</table>
+
+<h4>Submodule commands</h4>
+<table>
+<tr><th>Goal</th><th>Command</th></tr>
+<tr><td>Clone with services</td><td><code>git clone --recurse-submodules &lt;url&gt;</code></td></tr>
+<tr><td>Fix empty <code>services/</code></td><td><code>git submodule update --init --recursive</code></td></tr>
+<tr><td>Pull latest of all services</td><td><code>git submodule update --remote</code></td></tr>
+<tr><td>Push a service change</td><td><code>cd services/x &amp;&amp; git checkout main &amp;&amp; git commit -am "…" &amp;&amp; git push</code></td></tr>
+<tr><td>Bump the workspace pointer</td><td><code>cd ../.. &amp;&amp; git add services/x &amp;&amp; git commit -m "bump x" &amp;&amp; git push</code></td></tr>
+</table>
+
+<h4>The non-negotiables</h4>
+<ul>
+<li>Run the AI from the <strong>workspace root</strong>, never from inside a service folder — that's what gives it cross-service context.</li>
+<li><strong>Push the service repo before bumping</strong> the workspace pointer.</li>
+<li>Update <code>shared-contracts/</code> <strong>before</strong> changing any API shape or event.</li>
+<li><strong>Never vibe code</strong> — update the design, then regenerate.</li>
+<li>Read each artifact <strong>before</strong> approving a gate.</li>
+</ul>
+
+<p style="margin-top:48px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:13px;">
+Sources: this workspace's <code>CLAUDE.md</code> and <code>README.md</code>, and the <code>awslabs/aidlc-workflows</code> submodule (core workflow, process overview, terminology, and the "Working with AI-DLC" guide). Learn more: the AWS AI-DLC blog and Method Definition Paper linked from the upstream repo.
+</p>
+
+</body>
+</html>
